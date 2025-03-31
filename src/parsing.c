@@ -17,6 +17,16 @@ void    handle_files(int argc, char **argv, int *fd_infile, int *fd_outfile, int
         error_exit("File error : (", 1);
 }
 
+void	child_process(int fd_infile, int fd_outfile, char **cmd)
+{
+	if (dup2(fd_infile, STDIN_FILENO) == -1)
+        error_exit("Dup2 failed :(", 1);
+    if (dup2(fd_outfile, STDOUT_FILENO) == -1)
+        error_exit("Dup2 failed :(", 1);
+    execve(cmd[0], cmd, NULL);
+    error_exit("Execve failed :(", 1);
+}
+
 void    execute_commands(int fd[2], int fd_infile, int fd_outfile, char **cmd1, char **cmd2)
 {
     int pid1;
@@ -26,24 +36,15 @@ void    execute_commands(int fd[2], int fd_infile, int fd_outfile, char **cmd1, 
     if (pid1 < 0)
         error_exit("Oopsie fork failed :(", 2);
     if (pid1 == 0)
-    {
-        dup2(fd_infile, STDIN_FILENO);
-        dup2(fd[1], STDOUT_FILENO);
-        execve(cmd1[0], cmd1, NULL);
-        error_exit("Execve failed :(", 1);
-    }
+        child_process(fd_infile, fd[1], cmd1); 
+    close(fd[1]);
+
     pid2 = fork();
     if (pid2 < 0)
         error_exit("Oopsie fork failed :( ", 2);
     if (pid2 == 0)
-    {
-        dup2(fd[0], STDIN_FILENO);
-        dup2(fd_outfile, STDOUT_FILENO);
-        execve(cmd2[0], cmd2, NULL);
-        error_exit("Execve failed :(", 1);
-    }
+        child_process(fd[0], fd_outfile, cmd2);
     close(fd[0]);
-    close(fd[1]);
     waitpid(pid1, NULL, 0);
     waitpid(pid2, NULL, 0);
 }

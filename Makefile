@@ -5,7 +5,7 @@ LIBFT = $(LIBFT_DIR)/libft.a
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -fPIE
 
-SRC = src/main.c \
+SRC = src/pipex.c \
 	  src/error.c \
 	  src/parsing.c \
 
@@ -34,4 +34,3 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
-
