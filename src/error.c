@@ -22,3 +22,16 @@ void    handle_error(int argc, char **argv)
     if (access(argv[4], W_OK) == -1 && access(argv[4], F_OK) == -1)
         error_exit("Outfile not accessible in writing mode :(", 126);
 }
+
+void	free_tab(char **tab)
+{
+	size_t	i;
+
+	i = 0;
+	while (tab[i])
+	{
+		free(tab[i]);
+		i++;
+	}
+	free(tab);
+}

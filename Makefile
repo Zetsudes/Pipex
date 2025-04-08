@@ -8,6 +8,7 @@ CFLAGS = -Wall -Wextra -Werror -fPIE
 SRC = src/pipex.c \
 	  src/error.c \
 	  src/parsing.c \
+	  src/path.c \
 
 OBJ = $(SRC:.c=.o)
 NAME = pipex
