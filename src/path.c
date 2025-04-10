@@ -27,13 +27,20 @@ char	*get_path(char *cmd, char **envp)
 		return(NULL);
 	path = envp[i] + 5;
 	dir = ft_split(path, ':');
-	tmp = ft_strjoin(dir[i], "/");
-	final_path = ft_strjoin(tmp, cmd);
-	free(tmp);
-	if (access(final_path, F_OK | X_OK) == 0)
+	i = 0;
+	while (dir[i])
 	{
-    	free_tab(dir);
-    	return (final_path);
+		tmp = ft_strjoin(dir[i], "/");
+		final_path = ft_strjoin(tmp, cmd);
+		free(tmp);
+		if (access(final_path, F_OK | X_OK) == 0)
+		{
+			free_tab(dir);
+			return (final_path);
+		}
+		free(final_path);
+		i++;
 	}
-	free(final_path);
+	free_tab(dir);
+	return (NULL);
 }

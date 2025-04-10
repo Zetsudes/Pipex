@@ -15,7 +15,7 @@ void    error_exit(const char *msg, int exit_code)
 
 void    handle_error(int argc, char **argv)
 {
-    if (argc < 5)
+    if (argc != 5)
         error_exit("Invalid number of arguments :(", 1);
     if (access(argv[1], R_OK) == -1)
         error_exit("Infile not accessible in reading mode :(", 126);
