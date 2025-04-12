@@ -30,7 +30,6 @@ void		handle_error(int argc, char **argv);
 
 /************ CLEANING ************/
 void		free_tab(char **tab);
-void		free_all(t_pipex *pipex);
 
 /************ PARSING ************/
 void		handle_arguments(t_pipex *pipex, int argc, char **argv,

@@ -35,18 +35,3 @@ void	free_tab(char **tab)
 	}
 	free(tab);
 }
-void	free_all(t_pipex *pipex)
-{
-	if (pipex->cmd1)
-		free_tab(pipex->cmd1);
-	if (pipex->cmd2)
-		free_tab(pipex->cmd2);
-	if (pipex->fd_infile > 0)
-		close(pipex->fd_infile);
-	if (pipex->fd_outfile > 0)
-		close(pipex->fd_outfile);
-	if (pipex->fd[0] > 0)
-		close(pipex->fd[0]);
-	if (pipex->fd[1] > 0)
-		close(pipex->fd[1]);
-}
