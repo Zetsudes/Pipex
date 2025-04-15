@@ -33,20 +33,39 @@ void	handle_files(t_pipex *pipex)
 void	child_process(t_pipex *pipex, int fd_infile, int fd_outfile, char **cmd)
 {
 	char	*path;
-
+	char *cmd_name = NULL;
+	
 	if (dup2(fd_infile, STDIN_FILENO) == -1 || dup2(fd_outfile, STDOUT_FILENO) == -1)
-	{	clean_up(pipex);
+	{	
+		clean_up(pipex);
 		error_exit("dup2 failed :(", 1);
 	}
+    if (cmd && cmd[0])
+		cmd_name = strdup(cmd[0]);
 	path = get_path(cmd[0], pipex->envp);
 	if (!path)
 	{	clean_up(pipex);
-		error_exit(cmd[0], 127);
+		if (cmd_name)
+            error_exit(cmd_name, 127);
+        else
+            error_exit("command not found", 127);
 	}
 	execve(path, cmd, pipex->envp);
 	free(path);
+	if (cmd_name)
+	free(cmd_name);
+	else if (cmd && cmd[0])
+		cmd_name = strdup(cmd[0]);
+	
 	clean_up(pipex);
-	error_exit("Execve failed :(", 1);
+
+	if (cmd_name)
+	{
+		error_exit(cmd_name, 1);
+		free(cmd_name);
+	}
+	else
+		error_exit("Execve failed :(", 1);
 }
 
 int	execute_commands(t_pipex *pipex)
