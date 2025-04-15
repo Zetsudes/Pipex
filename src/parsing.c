@@ -30,53 +30,45 @@ void	handle_files(t_pipex *pipex)
 			0644);
 }
 
-void	child_process(t_pipex *pipex, int fd_infile, int fd_outfile, char **cmd)
+void child_process(t_pipex *pipex, int fd_in, int fd_out, char **cmd)
 {
-	char	*path;
-	char *cmd_name = NULL;
-	
-	if (dup2(fd_infile, STDIN_FILENO) == -1 || dup2(fd_outfile, STDOUT_FILENO) == -1)
-	{	
+	char *path;
+
+	if (dup2(fd_in, STDIN_FILENO) == -1 || dup2(fd_out, STDOUT_FILENO) == -1)
+	{
 		clean_up(pipex);
-		error_exit("dup2 failed :(", 1);
+		error_exit("dup2 failed", 1);
 	}
-    if (cmd && cmd[0])
-		cmd_name = strdup(cmd[0]);
+	close(fd_in);
+	close(fd_out);
+	if (!cmd || !cmd[0])
+	{
+		clean_up(pipex);
+		error_exit("command not found", 127);
+	}
 	path = get_path(cmd[0], pipex->envp);
 	if (!path)
-	{	clean_up(pipex);
-		if (cmd_name)
-            error_exit(cmd_name, 127);
-        else
-            error_exit("command not found", 127);
+	{
+		clean_up(pipex);
+		error_exit(cmd[0], 127);
 	}
 	execve(path, cmd, pipex->envp);
 	free(path);
-	if (cmd_name)
-	free(cmd_name);
-	else if (cmd && cmd[0])
-		cmd_name = strdup(cmd[0]);
-	
 	clean_up(pipex);
-
-	if (cmd_name)
-	{
-		error_exit(cmd_name, 1);
-		free(cmd_name);
-	}
-	else
-		error_exit("Execve failed :(", 1);
+	error_exit(cmd[0], 1);
 }
 
-int	execute_commands(t_pipex *pipex)
+int execute_commands(t_pipex *pipex)
 {
-	pid_t	pid1;
-	pid_t	pid2;
-	int		status;
+	pid_t pid1;
+	pid_t pid2;
+	int status;
 
+	if (pipe(pipex->fd) == -1)
+		error_exit("Pipe creation failed", 1);
 	pid1 = fork();
 	if (pid1 < 0)
-		error_exit("Oopsie fork failed :(", 2);
+		error_exit("Fork failed", 2);
 	if (pid1 == 0)
 	{
 		close(pipex->fd[0]);
@@ -85,10 +77,9 @@ int	execute_commands(t_pipex *pipex)
 	close(pipex->fd[1]);
 	pid2 = fork();
 	if (pid2 < 0)
-		error_exit("Oopsie fork failed :( ", 2);
+		error_exit("Fork failed", 2);
 	if (pid2 == 0)
 	{
-		close(pipex->fd[1]);
 		child_process(pipex, pipex->fd[0], pipex->fd_outfile, pipex->cmd2);
 	}
 	close(pipex->fd[0]);
@@ -96,6 +87,5 @@ int	execute_commands(t_pipex *pipex)
 	waitpid(pid2, &status, 0);
 	if (WIFEXITED(status))
 		return (WEXITSTATUS(status));
-	else
-		return (1);
+	return (1);
 }
