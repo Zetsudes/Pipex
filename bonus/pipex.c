@@ -1,5 +1,5 @@
 
-#include "../include/pipex.h"
+#include "../include/pipex_bonus.h"
 
 int	main(int argc, char **argv, char **envp)
 {
@@ -8,8 +8,8 @@ int	main(int argc, char **argv, char **envp)
 
 	handle_error(argc, argv);
 	handle_arguments(&pipex, argc, argv, envp);
-	handle_files(&pipex);
+	handle_pipes(&pipex);
 	exit_status = execute_commands(&pipex);
-	clean_up(&pipex);
+	free_cmds(pipex.cmds);
 	return (exit_status);
 }

@@ -30,18 +30,22 @@ void	handle_files(t_pipex *pipex)
 			0644);
 }
 
-void	child_process(int fd_infile, int fd_outfile, char **cmd, char **envp)
+void	child_process(t_pipex *pipex, int fd_infile, int fd_outfile, char **cmd)
 {
 	char	*path;
 
-	if (dup2(fd_infile, STDIN_FILENO) == -1)
-		error_exit("Dup2 failed :(", 1);
-	if (dup2(fd_outfile, STDOUT_FILENO) == -1)
-		error_exit("Dup2 failed :(", 1);
-	path = get_path(cmd[0], envp);
+	if (dup2(fd_infile, STDIN_FILENO) == -1 || dup2(fd_outfile, STDOUT_FILENO) == -1)
+	{	clean_up(pipex);
+		error_exit("dup2 failed :(", 1);
+	}
+	path = get_path(cmd[0], pipex->envp);
 	if (!path)
+	{	clean_up(pipex);
 		error_exit(cmd[0], 127);
-	execve(path, cmd, envp);
+	}
+	execve(path, cmd, pipex->envp);
+	free(path);
+	clean_up(pipex);
 	error_exit("Execve failed :(", 1);
 }
 
@@ -57,7 +61,7 @@ int	execute_commands(t_pipex *pipex)
 	if (pid1 == 0)
 	{
 		close(pipex->fd[0]);
-		child_process(pipex->fd_infile, pipex->fd[1], pipex->cmd1, pipex->envp);
+		child_process(pipex, pipex->fd_infile, pipex->fd[1], pipex->cmd1);
 	}
 	close(pipex->fd[1]);
 	pid2 = fork();
@@ -66,8 +70,7 @@ int	execute_commands(t_pipex *pipex)
 	if (pid2 == 0)
 	{
 		close(pipex->fd[1]);
-		child_process(pipex->fd[0], pipex->fd_outfile, pipex->cmd2,
-			pipex->envp);
+		child_process(pipex, pipex->fd[0], pipex->fd_outfile, pipex->cmd2);
 	}
 	close(pipex->fd[0]);
 	waitpid(pid1, NULL, 0);

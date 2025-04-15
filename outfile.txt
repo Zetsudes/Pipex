@@ -1,7 +1,0 @@
-42_pipex_tester
-greg_lib
-include
-Makefile
-outfile.txt
-pipex
-src

@@ -21,7 +21,6 @@ typedef struct s_pipex
 	char	**envp;
 	char	**argv;
 	int		argc;
-	int		file_error;
 }			t_pipex;
 
 /************ ERROR HANDLING ************/
@@ -30,13 +29,13 @@ void		handle_error(int argc, char **argv);
 
 /************ CLEANING ************/
 void		free_tab(char **tab);
+void		clean_up(t_pipex *pipex);
 
 /************ PARSING ************/
 void		handle_arguments(t_pipex *pipex, int argc, char **argv,
 				char **envp);
 void		handle_files(t_pipex *pipex);
-void		child_process(int fd_infile, int fd_outfile, char **cmd,
-				char **envp);
+void		child_process(t_pipex *pipex,  int fd_infile, int fd_outfile, char **cmd);
 int			execute_commands(t_pipex *pipex);
 
 /************ PATH ************/
