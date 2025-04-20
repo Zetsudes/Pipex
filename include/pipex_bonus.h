@@ -5,10 +5,12 @@
 # include <errno.h>
 # include <fcntl.h>
 # include <string.h>
-# include <stdbool.h>
 # include <sys/stat.h>
 # include <sys/types.h>
 # include <sys/wait.h>
+
+# define HEREDOC_PROMPT "heredoc> "
+# define HEREDOC "here_doc"
 
 typedef struct s_pipex
 {
@@ -17,28 +19,30 @@ typedef struct s_pipex
     char    **envp;
     char    ***cmds;
     int     cmd_count;
-    int     fd[2];
-    int     pipe_prev;
+    int     **pipes;
     int     fd_infile;
     int     fd_outfile;
-	int		last_pid;
-	bool	input_file_error;
+	int		is_heredoc;
+	char    *limiter;
 }			t_pipex;
 
 /************ ERROR HANDLING ************/
-void		error_exit(const char *msg, int exit_code);
-void		handle_error(int argc, char **argv);
+void        error_exit(const char *msg, int exit_code, void *to_free);
+void        handle_error(int argc, char **argv);
 
 /************ CLEANING ************/
 void		clean_up(t_pipex *pipex);
 void    	free_tab(char **tab);
+void        close_pipes(t_pipex *pipex);
+void        init_pipes(t_pipex *pipex);
 
 /************ PARSING ************/
 void		handle_arguments(t_pipex *pipex, int argc, char **argv, char **envp);
 void		handle_files(t_pipex *pipex);
 void		child_process(t_pipex *pipex, int fd_infile, int fd_outfile, char **cmd);
-void		execute_pipe(t_pipex *pipex);
 int			execute_commands(t_pipex *pipex);
+void        handle_heredoc(t_pipex *pipex);
+int         create_heredoc_file(char *limiter);
 
 /************ PATH ************/
 char		*get_path(char *cmd, char **envp);

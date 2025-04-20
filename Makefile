@@ -6,14 +6,15 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -fPIE
 
 SRC = src/pipex.c \
-	  src/error.c \
+	  src/utils.c \
 	  src/parsing.c \
 	  src/path.c \
 
 BONUS_SRC = bonus/pipex.c \
-	 	bonus/error.c \
+	 	bonus/utils.c \
 	  	bonus/parsing.c \
 	  	bonus/path.c \
+		bonus/heredoc.c \
 
 OBJ = $(SRC:.c=.o)
 BONUS_OBJ = $(BONUS_SRC:.c=.o)
