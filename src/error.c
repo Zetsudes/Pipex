@@ -1,7 +1,7 @@
 
 #include "../include/pipex.h"
 
-void	error_exit(const char *msg, int exit_code)
+void	error_exit(const char *msg, int exit_code, void *to_free)
 {
 	if (errno)
 		perror(msg);
@@ -10,13 +10,15 @@ void	error_exit(const char *msg, int exit_code)
 		ft_putstr_fd((char *)msg, 2);
 		ft_putstr_fd("\n", 2);
 	}
+	if (to_free)
+		free(to_free);
 	exit(exit_code);
 }
 
 void	handle_error(int argc, char **argv)
 {
 	if (argc != 5)
-		error_exit("Usage: ./pipex infile cmd1 cmd2 ... cmdn outfile", 1);
+		error_exit("Usage: ./pipex infile cmd1 cmd2 ... cmdn outfile", 1, NULL);
 	if (access(argv[1], R_OK) == -1)
 		perror(argv[1]);
 	if (access(argv[argc - 1], W_OK) == -1 && access(argv[argc - 1], F_OK) == 0)

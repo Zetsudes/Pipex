@@ -25,6 +25,8 @@ char	*get_path(char *cmd, char **envp)
 		i++;
 	if (!envp[i])
 		return(NULL);
+	if (access(cmd, F_OK | X_OK) == 0)
+		return (ft_strdup(cmd));
 	path = envp[i] + 5;
 	dir = ft_split(path, ':');
 	i = 0;

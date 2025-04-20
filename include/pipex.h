@@ -13,18 +13,18 @@
 
 typedef struct s_pipex
 {
-	int		fd[2];
-	int		fd_infile;
-	int		fd_outfile;
-	char	**cmd1;
-	char	**cmd2;
-	char	**envp;
-	char	**argv;
-	int		argc;
+	int     argc;
+    char    **argv;
+    char    **envp;
+    char    **cmd1;
+    char    **cmd2;
+    int     fd[2];
+    int     fd_infile;
+    int     fd_outfile;
 }			t_pipex;
 
 /************ ERROR HANDLING ************/
-void		error_exit(const char *msg, int exit_code);
+void		error_exit(const char *msg, int exit_code, void *to_free);
 void		handle_error(int argc, char **argv);
 
 /************ CLEANING ************/

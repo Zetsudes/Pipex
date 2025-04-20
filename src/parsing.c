@@ -23,39 +23,49 @@ void	handle_arguments(t_pipex *pipex, int argc, char **argv, char **envp)
 
 void	handle_files(t_pipex *pipex)
 {
-	if (pipe(pipex->fd) == -1)
-		error_exit("Pipe creation failed :(", 1);
 	pipex->fd_infile = open(pipex->argv[1], O_RDONLY);
-	pipex->fd_outfile = open(pipex->argv[4], O_WRONLY | O_CREAT | O_TRUNC,
-			0644);
+    if (pipex->fd_infile < 0)
+        perror(pipex->argv[1]);       
+    pipex->fd_outfile = open(pipex->argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (pipex->fd_outfile < 0)
+        perror(pipex->argv[4]);
 }
 
 void child_process(t_pipex *pipex, int fd_in, int fd_out, char **cmd)
 {
-	char *path;
+    char *path;
+    char *cmd_name = NULL;
 
-	if (dup2(fd_in, STDIN_FILENO) == -1 || dup2(fd_out, STDOUT_FILENO) == -1)
-	{
-		clean_up(pipex);
-		error_exit("dup2 failed", 1);
-	}
-	close(fd_in);
-	close(fd_out);
-	if (!cmd || !cmd[0])
-	{
-		clean_up(pipex);
-		error_exit("command not found", 127);
-	}
-	path = get_path(cmd[0], pipex->envp);
-	if (!path)
-	{
-		clean_up(pipex);
-		error_exit(cmd[0], 127);
-	}
-	execve(path, cmd, pipex->envp);
-	free(path);
-	clean_up(pipex);
-	error_exit(cmd[0], 1);
+    if (dup2(fd_in, STDIN_FILENO) == -1 || dup2(fd_out, STDOUT_FILENO) == -1)
+    {
+        close(fd_in);
+        close(fd_out);
+        clean_up(pipex);
+        error_exit("dup2 failed", 1, NULL);
+    }
+    close(fd_in);
+    close(fd_out);
+    if (!cmd || !cmd[0])
+    {
+        clean_up(pipex);
+        error_exit("command not found", 127, NULL);
+    }
+    cmd_name = ft_strdup(cmd[0]);
+    if (!cmd_name)
+    {
+        clean_up(pipex);
+        error_exit("Memory allocation failed", 1, NULL);
+    }
+    path = get_path(cmd[0], pipex->envp);
+    if (!path)
+    {
+        clean_up(pipex);
+        error_exit(cmd_name, 127, cmd_name);
+    } 
+    execve(path, cmd, pipex->envp);
+    free(path);
+    clean_up(pipex);
+    error_exit(cmd_name, 1, cmd_name);
 }
 
 int execute_commands(t_pipex *pipex)
@@ -65,10 +75,10 @@ int execute_commands(t_pipex *pipex)
 	int status;
 
 	if (pipe(pipex->fd) == -1)
-		error_exit("Pipe creation failed", 1);
+		error_exit("Pipe creation failed", 1, NULL);
 	pid1 = fork();
 	if (pid1 < 0)
-		error_exit("Fork failed", 2);
+		error_exit("Fork failed", 2, NULL);
 	if (pid1 == 0)
 	{
 		close(pipex->fd[0]);
@@ -77,11 +87,12 @@ int execute_commands(t_pipex *pipex)
 	close(pipex->fd[1]);
 	pid2 = fork();
 	if (pid2 < 0)
-		error_exit("Fork failed", 2);
-	if (pid2 == 0)
 	{
-		child_process(pipex, pipex->fd[0], pipex->fd_outfile, pipex->cmd2);
+		close(pipex->fd[0]);
+		error_exit("Fork failed", 2, NULL);
 	}
+	if (pid2 == 0)
+		child_process(pipex, pipex->fd[0], pipex->fd_outfile, pipex->cmd2);
 	close(pipex->fd[0]);
 	waitpid(pid1, NULL, 0);
 	waitpid(pid2, &status, 0);

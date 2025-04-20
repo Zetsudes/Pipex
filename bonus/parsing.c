@@ -16,14 +16,15 @@ void	handle_arguments(t_pipex *pipex, int argc, char **argv, char **envp)
 {
 	int i;
 
-	i = 0;
 	pipex->argc = argc;
 	pipex->argv = argv;
 	pipex->envp = envp;
-	pipex->cmds = (char ***)malloc(sizeof(char **) * (argc - 3 + 1));
+	pipex->cmd_count = argc - 3;
+	pipex->cmds = malloc(sizeof(char **) * (pipex->cmd_count + 1));
 	if (!pipex->cmds)
 		error_exit("Malloc failed :(", 1);
-	while (i < pipex->argc - 3)
+	i = 0;
+	while (i < pipex->cmd_count)
 	{
 		pipex->cmds[i] = ft_split(pipex->argv[i + 2], ' ');
 		i++;
@@ -31,94 +32,118 @@ void	handle_arguments(t_pipex *pipex, int argc, char **argv, char **envp)
 	pipex->cmds[i] = NULL;
 }
 
-void	handle_pipes(t_pipex *pipex)
-{
-	int i;
-
-	pipex->cmd_count = pipex->argc - 3;
-	pipex->pipes = malloc(sizeof(int[2]) * (pipex->cmd_count - 1));
-	if (!pipex->pipes)
-		error_exit("Malloc failed :(", 1, NULLs);
-	i = 0;
-	while (i < pipex->cmd_count - 1)
-	{
-		pipex->pipes[i] = malloc(sizeof(int) * 2);
-		if (!pipex->pipes[i])
-			error_exit("Malloc failed :(", 1, pipex->pipes);
-		if (pipe(pipex->pipes[i]) == -1)
-			error_exit("Pipe failed :(", 1, pipex->pipes);
-		i++;
-	}
+void handle_files(t_pipex *pipex) {
+    pipex->fd_infile = open(pipex->argv[1], O_RDONLY);
+    if (pipex->fd_infile < 0) {
+        // Handle non-existing input file specifically
+        pipex->input_file_error = true;
+        perror(pipex->argv[1]);
+    }
+    
+    pipex->fd_outfile = open(pipex->argv[pipex->argc - 1],
+        O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (pipex->fd_outfile < 0) {
+        clean_up(pipex);
+        perror(pipex->argv[pipex->argc - 1]);
+        exit(1);
+    }
 }
 
-void	child_process(int fd_infile, int fd_outfile, char **cmd, char **envp)
+void	child_process(t_pipex *pipex, int fd_infile, int fd_outfile, char **cmd)
 {
-	char	*path;
+	char *path;
 
-	if (dup2(fd_infile, STDIN_FILENO) == -1 || dup2(fd_outfile, STDOUT_FILENO) == -1)
-        error_exit("dup2 failed :(", 1, cmd);
-	path = get_path(cmd[0], envp);
-	if (!path)
-		error_exit(cmd[0], 127);
-	execve(path, cmd, envp);
-	error_exit("Execve failed :(", 1);
+    if (dup2(fd_infile, STDIN_FILENO) == -1 || dup2(fd_outfile, STDOUT_FILENO) == -1)
+    {
+        clean_up(pipex);
+        error_exit("dup2 failed", 1);
+    }
+    
+    // Close all file descriptors since we've already duplicated what we need
+    close(fd_infile);
+    close(fd_outfile);
+    close(pipex->fd_infile);
+    close(pipex->fd_outfile);
+    
+    if (!cmd || !cmd[0])
+    {
+        clean_up(pipex);
+        error_exit("command not found", 127);
+    }
+    
+    path = get_path(cmd[0], pipex->envp);
+    if (!path)
+    {
+        clean_up(pipex);
+        error_exit(cmd[0], 127);
+    }
+    
+    execve(path, cmd, pipex->envp);
+    free(path);
+    clean_up(pipex);
+    error_exit(cmd[0], 1);
 }
 
-void	fork_child(t_pipex *pipex, int in, int out, char **cmd)
-{
-	pid_t	pid;
-
-	pid = fork();
-	if (pid < 0)
-		error_exit("Oopsie fork failed :(", 2);
-	if (pid == 0)
-	{
-		if (in != -1)
-			close(pipex->fd[0]);
-		if (out != -1)
-			close(pipex->fd[1]);
-		child_process(in, out, cmd, pipex->envp);
-	}
+void execute_pipe(t_pipex *pipex) {
+    int cmd_index;
+    int in_fd;
+    
+    // Start with the input file
+    in_fd = pipex->fd_infile;
+    
+    for (cmd_index = 0; cmd_index < pipex->cmd_count; cmd_index++) {
+        // Set up output - either a pipe or the final output file
+        int out_fd;
+        if (cmd_index == pipex->cmd_count - 1)
+            out_fd = pipex->fd_outfile;
+        else {
+            if (pipe(pipex->fd) == -1)
+                error_exit("Pipe creation failed", 1);
+            out_fd = pipex->fd[1];
+        }
+        
+        // Fork and execute
+        pid_t pid = fork();
+        if (pid < 0)
+            error_exit("Fork failed", 2);
+        
+        if (cmd_index == pipex->cmd_count - 1)
+            pipex->last_pid = pid;
+            
+        if (pid == 0)
+            child_process(pipex, in_fd, out_fd, pipex->cmds[cmd_index]);
+            
+        // Close used file descriptors in parent
+        if (in_fd != pipex->fd_infile)
+            close(in_fd);
+        if (out_fd != pipex->fd_outfile)
+            close(out_fd);
+            
+        // Set up for the next command
+        if (cmd_index < pipex->cmd_count - 1)
+            in_fd = pipex->fd[0];
+    }
 }
 
-int	execute_commands(t_pipex *pipex)
+int execute_commands(t_pipex *pipex)
 {
-	int	i;
-	int	status;
-
-	i = 0;
-	fork_child(pipex, pipex->fd_infile, pipex->fd[1], pipex->cmds[i]);
-	close(pipex->fd[1]);
-	while (i < pipex->cmd_count - 2)
-	{
-		pipex->fd[0] = pipex->pipes[i][0];
-		pipex->fd[1] = pipex->pipes[i][1];
-		fork_child(pipex, pipex->fd[0], pipex->fd[1], pipex->cmds[i + 1]);
-		close(pipex->fd[0]);
-		close(pipex->fd[1]); 
-		i++;
-	}
-	fork_child(pipex, pipex->fd[0], pipex->fd_outfile, pipex->cmds[i]);
-	close(pipex->fd[0]);
-	while (wait(&status) > 0)
-		;
-	if (WIFEXITED(status))
-		return (WEXITSTATUS(status));
-	return (1);
+    int status = 0;
+    int last_status = 0;
+    
+    execute_pipe(pipex);  // Non-recursive version
+    
+    // Close any remaining file descriptors
+    if (pipex->fd_infile >= 0)
+        close(pipex->fd_infile);
+    if (pipex->fd_outfile >= 0)
+        close(pipex->fd_outfile);
+    
+    // Wait for all child processes
+    while (wait(&status) > 0) {
+        if (WIFEXITED(status))
+            last_status = WEXITSTATUS(status);
+    }
+    
+    return last_status;
 }
-
-// int	execute_commands(t_pipex *pipex)
-// {
-// 	int	status;
-
-// 	fork_child(pipex, pipex->fd_infile, pipex->fd[1], pipex->cmd1);
-// 	close(pipex->fd[1]);
-// 	fork_child(pipex, pipex->fd[0], pipex->fd_outfile, pipex->cmd2);
-// 	close(pipex->fd[0]);
-// 	wait(NULL);
-// 	waitpid(-1, &status, 0);
-// 	if (WIFEXITED(status))
-// 		return (WEXITSTATUS(status));
-// 	return (1);
-// }
 

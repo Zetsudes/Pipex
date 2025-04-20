@@ -21,6 +21,13 @@ char	*get_path(char *cmd, char **envp)
 	int i;
 
 	i = 0;
+
+	if (cmd[0] == '/' || (cmd[0] == '.' && cmd[1] == '/'))
+    {
+        if (access(cmd, F_OK | X_OK) == 0)
+            return (ft_strdup(cmd));
+        return (NULL);
+    }
 	while(envp[i] && ft_strncmp(envp[i], "PATH=", 5) != 0)
 		i++;
 	if (!envp[i])
