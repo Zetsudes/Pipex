@@ -10,25 +10,25 @@ SRC = src/pipex.c \
 	  src/parsing.c \
 	  src/path.c \
 
-BONUS_SRC = bonus/pipex.c \
-	 	bonus/utils.c \
-	  	bonus/parsing.c \
-	  	bonus/path.c \
-		bonus/heredoc.c \
+BONUS_SRC = bonus/pipex_bonus.c \
+			bonus/utils_bonus.c \
+			bonus/parsing_bonus.c \
+			bonus/path_bonus.c \
+			bonus/heredoc_bonus.c \
+			bonus/clean_bonus.c \
 
 OBJ = $(SRC:.c=.o)
 BONUS_OBJ = $(BONUS_SRC:.c=.o)
 
 NAME = pipex
-BONUS_NAME = pipex_bonus
+BONUS_NAME = pipex
 
 all: $(NAME)
-bonus: $(BONUS_NAME)
 
 $(NAME): $(OBJ) $(LIBFT)
 	$(CC) $(CFLAGS) $(OBJ) $(LIBFT) -o $(NAME)
 
-$(BONUS_NAME): $(BONUS_OBJ) $(LIBFT)
+bonus: $(BONUS_OBJ) $(LIBFT)
 	$(CC) $(CFLAGS) $(BONUS_OBJ) $(LIBFT) -o $(BONUS_NAME)
 
 $(LIBFT):
